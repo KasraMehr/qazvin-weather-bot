@@ -5,8 +5,9 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes, Job
 
 # --- Environment Variables ---
-TOKEN = os.environ["8277037293:AAEk626y-PfJBeXG0659wzVtkahkWPLb-tE"]
-OPENWEATHER_API_KEY = os.environ["1ad15b7bd719ebaf6faa8770a203f089"]
+
+TOKEN = "8277037293:AAEk626y-PfJBeXG0659wzVtkahkWPLb-tE"
+OPENWEATHER_API_KEY = "1ad15b7bd719ebaf6faa8770a203f089"
 
 CITY = "Qazvin"
 
