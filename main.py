@@ -3,7 +3,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import requests
 import datetime
 
-TOKEN = "توکن_ربات_تو"
+TOKEN = "8277037293:AAEk626y-PfJBeXG0659wzVtkahkWPLb-tE"
 OPENWEATHER_API_KEY = "1ad15b7bd719ebaf6faa8770a203f089"
 
 CITY = "Qazvin"
