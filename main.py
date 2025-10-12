@@ -1,78 +1,48 @@
 import os
+import asyncio
 import requests
-import datetime
 from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes, Job
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# --- Environment Variables ---
-
-TOKEN = "8277037293:AAEk626y-PfJBeXG0659wzVtkahkWPLb-tE"
-OPENWEATHER_API_KEY = "1ad15b7bd719ebaf6faa8770a203f089"
+TOKEN = os.environ.get("BOT_TOKEN")  # توی Render مقدار بده
+CHAT_ID = os.environ.get("CHAT_ID")  # آیدی خودت
 
 CITY = "Qazvin"
+API_KEY = "b6907d289e10d714a6e88b30761fae22"  # OpenWeatherMap test key
+
+async def get_weather():
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={CITY}&appid={API_KEY}&units=metric"
+    data = requests.get(url).json()
+    temp = data["main"]["temp"]
+    return f"🌤️ دمای فعلی {CITY}: {temp}°C"
+
+async def send_weather(application):
+    weather = await get_weather()
+    await application.bot.send_message(chat_id=CHAT_ID, text=weather)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "سلام 👋 من هر روز ساعت ۷ صبح بهت میگم امروز تو قزوین چی بپوشی ☀️\n"
-        "برای شروع، دستور /register رو بفرست ✅"
-    )
+    await update.message.reply_text("سلام! من هر روز ساعت ۸ صبح دمای قزوین رو می‌فرستم 🌞")
 
-async def register_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    users = context.bot_data.setdefault("users", set())
-    users.add(chat_id)
-    await update.message.reply_text("ثبت شد ✅ از فردا صبح ساعت ۷ پیام برات می‌فرستم 🌤️")
+async def schedule_weather(application):
+    while True:
+        now = asyncio.get_event_loop().time()
+        target_hour = 4.5
+        seconds_in_day = 24 * 60 * 60
+        delay = (target_hour * 3600 - (now % seconds_in_day)) % seconds_in_day
+        await asyncio.sleep(delay)
+        await send_weather(application)
+        await asyncio.sleep(24 * 3600)  # روز بعد
 
-def get_avg_temperature():
-    url = f"https://api.openweathermap.org/data/2.5/forecast?q={CITY}&units=metric&appid={OPENWEATHER_API_KEY}"
-    data = requests.get(url).json()
+async def main():
+    application = ApplicationBuilder().token(TOKEN).build()
 
-    temps = []
-    now = datetime.datetime.utcnow() + datetime.timedelta(hours=3.5)  # تهران
-    today = now.date()
+    application.add_handler(CommandHandler("start", start))
 
-    for item in data["list"]:
-        dt = datetime.datetime.utcfromtimestamp(item["dt"]) + datetime.timedelta(hours=3.5)
-        if dt.date() == today and 8 <= dt.hour <= 17:
-            temps.append(item["main"]["temp"])
+    # تسک ارسال روزانه بدون JobQueue
+    asyncio.create_task(schedule_weather(application))
 
-    if temps:
-        return sum(temps) / len(temps)
-    return None
-
-async def send_daily_weather(context: ContextTypes.DEFAULT_TYPE):
-    avg_temp = get_avg_temperature()
-
-    if avg_temp is None:
-        msg = "نتونستم دمای امروز قزوین رو پیدا کنم 😅"
-    elif avg_temp < 5:
-        msg = "خیلی سرده! کاپشن ضخیم، کلاه و دستکش یادت نره 🧥🧣"
-    elif avg_temp < 15:
-        msg = "هوا خنکه، یه ژاکت یا سویشرت خوبه 😌"
-    elif avg_temp < 25:
-        msg = "هوا معتدله، لباس راحت و نازک بپوش 😎"
-    elif avg_temp < 35:
-        msg = "هوا گرمه، لباس نخی و روشن بپوش ☀️"
-    else:
-        msg = "خیلی گرمه! بهتره تا می‌تونی خنک بمونی 😰"
-
-    for chat_id in context.application.bot_data.get("users", set()):
-        if avg_temp:
-            text = f"دمای میانگین امروز قزوین: {avg_temp:.1f}°C\n{msg}"
-        else:
-            text = msg
-        await context.bot.send_message(chat_id=chat_id, text=text)
-
-def main():
-    app = Application.builder().token(TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("register", register_user))
-
-    tehran_time = datetime.time(hour=7, minute=0, tzinfo=datetime.timezone(datetime.timedelta(hours=3, minutes=30)))
-    app.job_queue.run_daily(send_daily_weather, time=tehran_time)
-
-    app.run_polling()
+    print("✅ Bot started successfully")
+    await application.run_polling()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
