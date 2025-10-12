@@ -26,6 +26,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def schedule_weather(application):
     while True:
         now = asyncio.get_event_loop().time()
+        # 8 صبح به وقت UTC حدوداً 4:30 صبح UTC می‌شه (چون تهران UTC+3:30 هست)
         target_hour = 4.5
         seconds_in_day = 24 * 60 * 60
         delay = (target_hour * 3600 - (now % seconds_in_day)) % seconds_in_day
